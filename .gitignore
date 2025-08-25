@@ -1,12 +1,19 @@
+# Python
 __pycache__/
-*.py[cod]
+*.pyc
+
+# Virtual env
 venv/
-.env
+
+# App artifacts
 uploads/
 outputs/
 runs/
 *.mp4
-*.png
 *.csv
+*.png
 *.json
-*.log
+
+# OS/editor
+.DS_Store
+*.swp
