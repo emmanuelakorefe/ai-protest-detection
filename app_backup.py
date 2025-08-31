@@ -1,4 +1,4 @@
-# app.py — Campus Protest Detection MVP with Video Showcase (Fixed)
+# app.py — Campus Protest Detection MVP with Video Showcase
 # Features: upload -> detect people + face blur -> annotated MP4 with playback + CSV + chart
 # Threshold alerts (≥N people for ≥D seconds) -> SNS email with S3 pre-signed links
 
@@ -21,7 +21,7 @@ import mimetypes
 # --------------------
 AWS_REGION       = os.getenv("AWS_REGION", "us-east-2").strip()
 SNS_TOPIC_ARN    = os.getenv("SNS_TOPIC_ARN", "arn:aws:sns:us-east-2:463367047047:aidetect").strip()
-S3_BUCKET        = os.getenv("S3_BUCKET", "ai-protest-detection-yourname-2025").strip()
+S3_BUCKET        = os.getenv("S3_BUCKET", "").strip()
 URL_EXPIRES_SECS = int(os.getenv("URL_EXPIRES_SECS", "3600"))
 
 sns = boto3.client("sns", region_name=AWS_REGION) if SNS_TOPIC_ARN else None
@@ -42,7 +42,6 @@ def publish_sns(subject: str, message: str) -> Tuple[bool, str]:
 
 def upload_and_sign(local_path: str, run_id: str) -> str:
     if not s3 or not S3_BUCKET:
-        print(f"⚠️ S3 not configured, skipping upload of {local_path}")
         return ""
 
     key = f"runs/{run_id}/{os.path.basename(local_path)}"
@@ -54,32 +53,43 @@ def upload_and_sign(local_path: str, run_id: str) -> str:
 
     print(f"🚀 Uploading {local_path} to s3://{S3_BUCKET}/{key} with type {content_type}")
 
-    try:
-        s3.upload_file(
-    local_path,
-    S3_BUCKET,
-    key,
-    ExtraArgs={
-        "ContentType": content_type,
-        "ContentDisposition": "inline"
-    }
-)
-        # Generate signed URL for secure download
-        signed_url = s3.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": S3_BUCKET, "Key": key},
-            ExpiresIn=URL_EXPIRES_SECS,
-        )
-        print(f"🔐 Signed URL: {signed_url}")
+    s3.upload_file(
+        local_path,
+        S3_BUCKET,
+        key,
+        ExtraArgs={
+            "ContentType": content_type,
+            "ContentDisposition": "inline",
+            "ACL": "public-read"
+        }
+    )
 
-        # Return public streaming URL for better browser compatibility
-        public_url = f"https://{S3_BUCKET}.s3.amazonaws.com/{key}"
-        print(f"🌍 Public URL for streaming: {public_url}")
-        return public_url
+    # Optional: generate signed URL (valid for download)
+    signed_url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": S3_BUCKET, "Key": key},
+        ExpiresIn=URL_EXPIRES_SECS,
+    )
+    print(f"🔐 Signed URL: {signed_url}")
 
-    except Exception as e:
-        print(f"❌ S3 upload failed: {str(e)}")
-        return ""
+    # ✅ Return public streaming URL
+    public_url = f"https://{S3_BUCKET}.s3.amazonaws.com/{key}"
+    print(f"🌍 Public URL for streaming: {public_url}")
+    return public_url
+
+    # Optional: generate signed URL (valid for download)
+    signed_url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": S3_BUCKET, "Key": key},
+        ExpiresIn=URL_EXPIRES_SECS,
+    )
+    print(f"🔐 Signed URL: {signed_url}")
+
+    # ✅ Temporary fix: return clean public URL for streaming
+    public_url = f"https://{S3_BUCKET}.s3.amazonaws.com/{key}"
+    print(f"🌍 Public URL for streaming: {public_url}")
+    
+    return public_url
 
 # --------------------
 # Paths / App config
@@ -204,7 +214,6 @@ INDEX_HTML = """
 <div class="box">
   <h3>🔧 System Health</h3>
   <p><a href="/test-alert" target="_blank" style="color:#667eea;text-decoration:none">🧪 Test Alert System</a> - Verify email notifications</p>
-  <p><a href="/health" target="_blank" style="color:#667eea;text-decoration:none">🏥 Health Check</a> - View system status</p>
 </div>
 
 </body></html>
@@ -248,23 +257,23 @@ RESULT_HTML = """
   <p>Watch your video with real-time AI annotations showing detected people and privacy-protected faces:</p>
   
   <div class="video-container">
-    <video controls preload="metadata" style="width: 100%; height: auto;">
-      {% if video_src %}
-        <source src="{{ video_src }}" type="video/mp4">
-      {% endif %}
-      <p style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-        ⚠️ Video playback issue? 
-        <a href="{{ local_video_url }}" download style="color: #007bff; font-weight: bold;">Download the video file</a> 
-        or try <a href="/debug/video/{{ out_name }}" style="color: #007bff;">debug info</a>
-      </p>
-    </video>
+  <video controls preload="metadata" style="width: 100%; height: auto;">
+    <source src="{{ s3_vid | safe }}" type="video/mp4">
+    <p style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+      ⚠️ Video playback issue? 
+      <a href="{{ s3_vid | safe }}" download style="color: #007bff; font-weight: bold;">Download the video file</a> 
+      or try <a href="/debug/video/{{ out_name }}" style="color: #007bff;">debug info</a>
+    </p>
+  </video>
+</div>
+
     <div class="video-overlay">
       🤖 AI Annotated • {{max_people}} Peak People
     </div>
   </div>
   
   <div style="text-align: center; margin: 15px 0;">
-    <a href="{{local_video_url}}" download style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
+    <a href="{{out_url}}" download style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
       📥 Download Video
     </a>
     <a href="/debug/video/{{out_name}}" style="background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; margin-left: 10px;">
@@ -340,7 +349,7 @@ RESULT_HTML = """
   <div class="download-grid">
     <div class="download-card">
       <strong>📹 Annotated Video</strong><br>
-      <a href="{{local_video_url}}">{{out_name}}</a>
+      <a href="{{out_url}}">{{out_name}}</a>
     </div>
     <div class="download-card">
       <strong>📊 Trend Data (CSV)</strong><br>
@@ -386,7 +395,7 @@ RESULT_HTML = """
 """
 
 # --------------------
-# Small helpers
+# Small helpers (unchanged)
 # --------------------
 def allowed_file(name: str) -> bool:
     _, ext = os.path.splitext(name.lower())
@@ -568,39 +577,39 @@ def send_alert_emails(alerts: List[Dict], people_thresh: int, min_dur: int,
     peak_all = max([a["peak"] for a in alerts]) if alerts else 0
     total_duration = sum([a["end_sec"] - a["start_sec"] + 1 for a in alerts])
     
-    subject = f"CAMPUS ALERT: {len(alerts)} Crowd Event(s) Detected - Peak {peak_all} People"
+    subject = f"🚨 CAMPUS ALERT: {len(alerts)} Crowd Event(s) Detected - Peak {peak_all} People"
     
     lines = [
-        "CAMPUS AI SURVEILLANCE SYSTEM ALERT",
+        "🎯 CAMPUS AI SURVEILLANCE SYSTEM ALERT",
         "=" * 50,
-        f"DETECTION SUMMARY:",
-        f"   • Alert Threshold: >={people_thresh} people for >={min_dur}s",
+        f"📊 DETECTION SUMMARY:",
+        f"   • Alert Threshold: ≥{people_thresh} people for ≥{min_dur}s",
         f"   • Events Detected: {len(alerts)}",
         f"   • Peak Crowd Size: {peak_all} people",
         f"   • Total Alert Duration: {total_duration} seconds",
         "",
-        f"EVENT TIMELINE:",
+        f"⏰ EVENT TIMELINE:",
         f"   • Time Windows: {windows}",
         "",
-        f"ANALYSIS FILES:",
+        f"📁 ANALYSIS FILES:",
         f"   • Annotated Video: {out_name}",
         f"   • Crowd Data (CSV): {csv_name}",
         f"   • Trend Chart (PNG): {png_name}",
         "",
-        f"SECURE DOWNLOAD LINKS:",
+        f"🔗 SECURE DOWNLOAD LINKS:",
     ]
     
-    if out_url:  lines.append(f"   Video: {out_url}")
-    if csv_url:  lines.append(f"   Data:  {csv_url}")
-    if png_url:  lines.append(f"   Chart: {png_url}")
-    if json_url: lines.append(f"   JSON:  {json_url}")
+    if out_url:  lines.append(f"   📹 Video: {out_url}")
+    if csv_url:  lines.append(f"   📊 Data:  {csv_url}")
+    if png_url:  lines.append(f"   📈 Chart: {png_url}")
+    if json_url: lines.append(f"   📋 JSON:  {json_url}")
     
     lines.extend([
         "",
-        "Links expire in 1 hour for security.",
-        "This alert was sent to: moldplay267@gmail.com",
+        "⚠️  Links expire in 1 hour for security.",
+        "📧 This alert was sent to: moldplay267@gmail.com",
         "",
-        "Automated Campus AI Detection System"
+        "🤖 Automated Campus AI Detection System"
     ])
     
     ok, info = publish_sns(subject, "\n".join(lines))
@@ -621,11 +630,11 @@ def download(fname):
     path = os.path.join(OUTPUT_DIR, clean_fname)
     
     if not os.path.isfile(path):
-        print(f"File not found: {path}")
+        print(f"❌ File not found: {path}")
         abort(404, f"File not found: {clean_fname}")
     
     file_size = os.path.getsize(path)
-    print(f"Serving file: {clean_fname} (size: {file_size:,} bytes)")
+    print(f"📁 Serving file: {clean_fname} (size: {file_size:,} bytes)")
     
     try:
         # For video files, use streaming response
@@ -642,7 +651,7 @@ def download(fname):
             return send_from_directory(OUTPUT_DIR, clean_fname)
             
     except Exception as e:
-        print(f"Error serving file: {str(e)}")
+        print(f"❌ Error serving file: {str(e)}")
         abort(500, f"Error serving file: {str(e)}")
 
 @app.get("/test-alert")
@@ -661,36 +670,36 @@ def test_alert():
             topic_list = f"   Error: {str(e)}"
     
     # Now test the alert
-    test_subject = "TEST: Campus AI System Check"
-    test_message = """CAMPUS AI SURVEILLANCE SYSTEM TEST
+    test_subject = "🧪 TEST: Campus AI System Check"
+    test_message = """🎯 CAMPUS AI SURVEILLANCE SYSTEM TEST
 ================================================
-SYSTEM STATUS: OPERATIONAL
+📊 SYSTEM STATUS: ✅ OPERATIONAL
 
 This is a test alert to verify email notifications.
 
-Recipient: moldplay267@gmail.com
-Test Time: System operational check
-Automated Campus AI Detection System
+📧 Recipient: moldplay267@gmail.com
+🕒 Test Time: System operational check
+🤖 Automated Campus AI Detection System
 
 If you receive this message, alerts are working correctly!
 """
     ok, info = publish_sns(test_subject, test_message)
     
     status_msg = f"""
-Email Alert Test Results
+📧 Email Alert Test Results
 {'='*50}
-Status: {'SUCCESS' if ok else 'FAILED'}
+Status: {'✅ SUCCESS' if ok else '❌ FAILED'}
 Details: {info}
 Target: moldplay267@gmail.com
 Region: us-east-2
 
-CONFIGURED TOPIC ARN:
+🎯 CONFIGURED TOPIC ARN:
 {SNS_TOPIC_ARN}
 
-AVAILABLE TOPICS IN YOUR ACCOUNT:
+📋 AVAILABLE TOPICS IN YOUR ACCOUNT:
 {topic_list}
 
-TROUBLESHOOTING:
+💡 TROUBLESHOOTING:
 {'Email sent successfully!' if ok else 'Check if the topic ARN matches an available topic above.'}
 """
     
@@ -752,7 +761,7 @@ def process():
                 missing_files.append(name)
             else:
                 size = os.path.getsize(file_path)
-                print(f"Created {name}: {os.path.basename(file_path)} ({size:,} bytes)")
+                print(f"✅ Created {name}: {os.path.basename(file_path)} ({size:,} bytes)")
         
         if missing_files:
             raise RuntimeError(f"Missing output files: {', '.join(missing_files)}")
@@ -777,17 +786,10 @@ def process():
             out_url=s3_vid, csv_url=s3_csv, png_url=s3_png, json_url=s3_json
         )
 
-    # Determine the best video source for playback
-    # Use S3 if available, otherwise fallback to local serving
-    video_src = s3_vid if s3_vid else f"/outputs/{os.path.basename(out_path)}"
-    local_video_url = f"/outputs/{os.path.basename(out_path)}"
-
     return render_template_string(
         RESULT_HTML,
         in_name=os.path.basename(in_path),
-        out_name=os.path.basename(out_path),
-        video_src=video_src,
-        local_video_url=local_video_url,
+        out_name=os.path.basename(out_path), out_url=f"/outputs/{os.path.basename(out_path)}",
         csv_name=os.path.basename(csv_path), csv_url=f"/outputs/{os.path.basename(csv_path)}",
         png_name=os.path.basename(png_path), png_url=f"/outputs/{os.path.basename(png_path)}",
         alerts_name=os.path.basename(alerts_path), alerts_url=f"/outputs/{os.path.basename(alerts_path)}",
@@ -814,33 +816,33 @@ def health_check():
     }
     
     # Test AWS credentials
-    aws_test = "Not tested"
+    aws_test = "❌ Not tested"
     if sns:
         try:
             # Try to list topics to test credentials
             response = sns.list_topics()
-            aws_test = "Credentials working"
+            aws_test = "✅ Credentials working"
         except Exception as e:
-            aws_test = f"Credential error: {str(e)[:50]}..."
+            aws_test = f"❌ Credential error: {str(e)[:50]}..."
     
     return f"""
-SYSTEM HEALTH CHECK
+🏥 SYSTEM HEALTH CHECK
 {'='*40}
-Status: {health_info['status'].upper()}
-YOLO Model: {health_info['yolo_model']}
-Face Detection: {health_info['face_cascade']}
-SNS Alerts: {'Ready' if health_info['sns_configured'] else 'Not configured'}
-AWS Credentials: {aws_test}
-S3 Storage: {'Ready' if health_info['s3_configured'] else 'Not configured'}
-Upload Dir: {'Ready' if health_info['upload_dir'] else 'Missing'}
-Output Dir: {'Ready' if health_info['output_dir'] else 'Missing'}
+🤖 Status: {health_info['status'].upper()}
+📊 YOLO Model: {health_info['yolo_model']}
+👤 Face Detection: {health_info['face_cascade']}
+📧 SNS Alerts: {'✅ Ready' if health_info['sns_configured'] else '❌ Not configured'}
+🔑 AWS Credentials: {aws_test}
+☁️  S3 Storage: {'✅ Ready' if health_info['s3_configured'] else '❌ Not configured'}
+📁 Upload Dir: {'✅ Ready' if health_info['upload_dir'] else '❌ Missing'}
+📁 Output Dir: {'✅ Ready' if health_info['output_dir'] else '❌ Missing'}
 
-Target Email: moldplay267@gmail.com
-SNS Topic: aidetect
-Region: us-east-2
-Topic ARN: {SNS_TOPIC_ARN[:50]}...
+📧 Target Email: moldplay267@gmail.com
+🎯 SNS Topic: aidetect
+🌍 Region: us-east-2
+📋 Topic ARN: {SNS_TOPIC_ARN[:50]}...
 
-Debug URLs:
+🔧 Debug URLs:
    • /test-alert - Test email alerts
    • /debug/video/filename.mp4 - Check video properties
 """, 200
@@ -859,15 +861,15 @@ def list_output_files():
                     
                     # Show file type icon
                     if f.endswith('.mp4'):
-                        icon = "Video"
+                        icon = "🎬"
                     elif f.endswith('.csv'):
-                        icon = "CSV"
+                        icon = "📊"
                     elif f.endswith('.png'):
-                        icon = "Chart"
+                        icon = "📈"
                     elif f.endswith('.json'):
-                        icon = "JSON"
+                        icon = "📋"
                     else:
-                        icon = "File"
+                        icon = "📁"
                     
                     files.append(f"{icon} <a href='/outputs/{f}'>{f}</a> ({size_mb:.1f} MB)")
         
@@ -880,21 +882,21 @@ def list_output_files():
 .clean{{background:#e8f5e8;padding:10px;border-radius:5px;margin:10px 0}}
 </style></head><body>
 
-<h2>Output Directory Contents</h2>
+<h2>📂 Output Directory Contents</h2>
 <p><strong>Directory:</strong> {OUTPUT_DIR}</p>
 <p><strong>Total files:</strong> {len(files)}</p>
 
 <div class="clean">
-<strong>Clean Filenames:</strong> New uploads will now use clean, short filenames like:<br>
+<strong>🧹 Clean Filenames:</strong> New uploads will now use clean, short filenames like:<br>
 • <code>a1b2c3d4_video_annotated.mp4</code><br>
 • <code>a1b2c3d4_video_trend.csv</code><br>
 • <code>a1b2c3d4_video_trend.png</code>
 </div>
 
-<h3>Current Files:</h3>
+<h3>📁 Current Files:</h3>
 {files_list}
 
-<p><strong>Actions:</strong>
+<p><strong>🔧 Actions:</strong>
 <a href="/debug/cleanup">Clean old files</a> | 
 <a href="/">Upload new video</a>
 </p>
@@ -902,7 +904,7 @@ def list_output_files():
 </body></html>
         """, 200
     except Exception as e:
-        return f"Error listing files: {str(e)}", 500
+        return f"❌ Error listing files: {str(e)}", 500
 
 @app.get("/debug/cleanup")
 def cleanup_files():
@@ -918,7 +920,7 @@ def cleanup_files():
                     cleaned.append(f)
         
         return f"""
-CLEANUP COMPLETE
+🧹 CLEANUP COMPLETE
 {'='*50}
 Removed {len(cleaned)} problematic files:
 {chr(10).join(cleaned) if cleaned else 'No files needed cleaning'}
@@ -926,9 +928,7 @@ Removed {len(cleaned)} problematic files:
 <a href="/debug/files">View remaining files</a> | <a href="/">Upload new video</a>
         """, 200
     except Exception as e:
-        return f"Cleanup error: {str(e)}", 500
-
-@app.get("/debug/video/<filename>")
+        return f"❌ Cleanup error: {str(e)}", 500
 def debug_video(filename):
     """Debug video file properties"""
     path = os.path.join(OUTPUT_DIR, filename)
@@ -950,39 +950,32 @@ def debug_video(filename):
         cap.release()
         
         info = f"""
-VIDEO DEBUG INFO: {filename}
+🎬 VIDEO DEBUG INFO: {filename}
 {'='*50}
-File Size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)
-Dimensions: {width}x{height}
-Frame Rate: {fps} FPS
-Frame Count: {frame_count}
-Duration: {frame_count/fps:.1f} seconds
-Codec: {codec} ({fourcc})
-Path: {path}
-OpenCV can read: Yes
+📁 File Size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)
+📺 Dimensions: {width}x{height}
+🎯 Frame Rate: {fps} FPS
+🎞️  Frame Count: {frame_count}
+⏱️  Duration: {frame_count/fps:.1f} seconds
+🔧 Codec: {codec} ({fourcc})
+📂 Path: {path}
+✅ OpenCV can read: Yes
 
-Browser Compatibility:
-   - H.264/MP4: {'Good' if codec in ['avc1', 'h264'] else 'May not work'}
-   - Size: {'Good' if file_size < 100*1024*1024 else 'Large file'}
-
-Access URLs:
-   - Local: /outputs/{filename}
-   - Full URL: http://your-server:5000/outputs/{filename}
+🌐 Browser Compatibility:
+   - H.264/MP4: {'✅ Good' if codec in ['avc1', 'h264'] else '⚠️ May not work'}
+   - Size: {'✅ Good' if file_size < 100*1024*1024 else '⚠️ Large file'}
 """
     else:
         info = f"""
-VIDEO DEBUG ERROR: {filename}
+❌ VIDEO DEBUG ERROR: {filename}
 {'='*50}
-File Size: {file_size:,} bytes
-Path: {path}
-OpenCV cannot read this file
-Possible codec issue
+📁 File Size: {file_size:,} bytes
+📂 Path: {path}
+❌ OpenCV cannot read this file
+❌ Possible codec issue
 """
     
     return info, 200
-
-# Error handlers
-@app.errorhandler(413)
 def too_large(e):
     return f"File too large. Maximum size: {MAX_MB}MB", 413
 
@@ -998,14 +991,13 @@ def internal_error(e):
 # Main
 # --------------------
 if __name__ == "__main__":
-    print("Starting Campus Protest Detection System...")
-    print(f"Email alerts configured for: moldplay267@gmail.com")
-    print(f"SNS Topic: aidetect (us-east-2)")
-    print(f"YOLO Model: YOLOv8n (CPU optimized)")
-    print(f"Face blurring: OpenCV Haar Cascades")
-    print(f"Upload limit: {MAX_MB}MB")
-    print(f"Supported formats: {', '.join(sorted(ALLOWED_EXT))}")
-    print(f"S3 Bucket: {S3_BUCKET if S3_BUCKET else 'Not configured'}")
+    print("🚀 Starting Campus Protest Detection System...")
+    print(f"📧 Email alerts configured for: moldplay267@gmail.com")
+    print(f"🌐 SNS Topic: aidetect (us-east-2)")
+    print(f"📊 YOLO Model: YOLOv8n (CPU optimized)")
+    print(f"🔒 Face blurring: OpenCV Haar Cascades")
+    print(f"📁 Upload limit: {MAX_MB}MB")
+    print(f"🎯 Supported formats: {', '.join(sorted(ALLOWED_EXT))}")
     print("="*50)
     
     # Run development server
