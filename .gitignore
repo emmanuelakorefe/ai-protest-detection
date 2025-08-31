@@ -18,3 +18,4 @@ runs/
 .DS_Store
 *.swp
 .terraform/
+.terraform/
