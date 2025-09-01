@@ -1,47 +1,95 @@
-# Campus Protest Detection (MVP)
+# 📢 AI Protest Detection System
 
-Upload short videos, auto-detect crowd size with YOLOv8, blur faces for privacy, trigger alerts when
-crowds exceed a threshold for a sustained duration, and deliver annotated video + CSV + chart
-with signed links via AWS S3/SNS.
+An intelligent surveillance system that detects protest-like group behavior using **YOLOv8**, **OpenCV**, and **AWS services**. Designed for public and campus safety with real-time detection, alerting, and video playback.
 
 ---
 
-## Demo Screenshots
+## 🚀 Features
 
-### Upload & Settings  
-![Upload Screen](assets/src1.png)
-
-### Processed Results  
-![Processed Results](assets/src2.png)
-
-### Crowd Size Trends  
-![Crowd Trends](assets/src3.png)
+- 🔍 Real-time people detection with YOLOv8
+- ⚠️ Protest threshold alerts (e.g., ≥N people for ≥D seconds)
+- 📧 AWS SNS email notifications with images and links
+- 🛡️ Face blurring for privacy
+- 🌐 Web-based UI (Flask)
+- ☁️ Uploads to S3 (videos + charts)
+- 📊 Trend analysis via CSV + PNG charts
+- 📦 Deployable with EC2, Gunicorn, Nginx
 
 ---
 
-## Features
-- Crowd detection using YOLOv8
-- Face blurring for privacy
-- Configurable thresholds (people count + duration)
-- Automatic alerts via AWS SNS (email, SMS, etc.)
-- Secure file outputs to S3 (video, CSV, chart, JSON)
-Open http://<server-ip>:5000
+## 🖥️ Demo Screenshots
 
-Security & Privacy
+### 1. Upload Page  
+![Upload](screenshots/protest-detection-1.png)
 
-Faces blurred by default
+### 2. Detection in Action  
+![Detection](screenshots/protest-detection-2.png)
 
-No credentials in repo (env vars only)
+### 3. AWS SNS Email Alert  
+![Email](screenshots/protest-detection-3.png)
 
-S3 objects private; alerts send expiring presigned URLs
-## Run (local/EC2)
+### 4. Chart and CSV Export  
+![Data](screenshots/protest-detection-4.png)
+
+### 5. Annotated Video Playback  
+![Playback](screenshots/protest-detection-5.jpg)
+
+---
+
+## 📦 Tech Stack
+
+- **Frontend**: HTML (Flask template)
+- **Backend**: Python + Flask
+- **Detection**: YOLOv8 + OpenCV
+- **Cloud**: AWS SNS, S3
+- **Deployment**: EC2, Gunicorn, Nginx
+
+---
+
+## ⚙️ How to Run
+
 ```bash
-python3 -m venv venv && source venv/bin/activate
+git clone https://github.com/emmanuelakorefe/ai-protest-detection.git
+cd ai-protest-detection
+
+➡️ Visit http://localhost:5000 in your browser.
+
+gunicorn app:app --bind 0.0.0.0:5000
+
+📤 Deployment Options
+
+EC2 with Elastic IP + Nginx
+
+Docker (optional)
+
+CI/CD: GitHub Actions, Terraform, or AWS CodePipeline
+
+🎯 Use Cases
+
+Campus protest alerts
+
+Security threat monitoring
+
+Event crowd control
+
+Loitering/clustering detection
+
+👤 Author
+
+Emmanuel Akorefe
+🔗 GitHub
+📄 License
+
+MIT License — Feel free to fork, modify, and deploy.
+
+---
+
+Once you save this as `README.md`, do the following:
+
+```bash
+git add README.md
+git commit -m "Added updated README with renamed screenshots"
+git push origin main
+
 pip install -r requirements.txt
-export AWS_REGION=eu-central-1
-export SNS_TOPIC_ARN=arn:aws:sns:eu-central-1:123456789012:topic
-
-
-
-export S3_BUCKET=your-bucket
 python app.py
