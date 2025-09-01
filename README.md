@@ -1,95 +1,105 @@
-# 📢 AI Protest Detection System
+# 🛡️ AI Protest Detection System
 
-An intelligent surveillance system that detects protest-like group behavior using **YOLOv8**, **OpenCV**, and **AWS services**. Designed for public and campus safety with real-time detection, alerting, and video playback.
-
----
-
-## 🚀 Features
-
-- 🔍 Real-time people detection with YOLOv8
-- ⚠️ Protest threshold alerts (e.g., ≥N people for ≥D seconds)
-- 📧 AWS SNS email notifications with images and links
-- 🛡️ Face blurring for privacy
-- 🌐 Web-based UI (Flask)
-- ☁️ Uploads to S3 (videos + charts)
-- 📊 Trend analysis via CSV + PNG charts
-- 📦 Deployable with EC2, Gunicorn, Nginx
+Real-time campus protest detection using YOLOv8, OpenCV, and AWS services.  
+Uploads videos, detects crowd clustering, sends email alerts, and exports trend data.
 
 ---
 
-## 🖥️ Demo Screenshots
+## ⚙️ Features
 
-### 1. Upload Page  
-![Upload](screenshots/protest-detection-1.png)
-
-### 2. Detection in Action  
-![Detection](screenshots/protest-detection-2.png)
-
-### 3. AWS SNS Email Alert  
-![Email](screenshots/protest-detection-3.png)
-
-### 4. Chart and CSV Export  
-![Data](screenshots/protest-detection-4.png)
-
-### 5. Annotated Video Playback  
-![Playback](screenshots/protest-detection-5.jpg)
+- 🎯 Object detection with YOLOv8  
+- 🧠 Protest behavior recognition (loitering, clustering)  
+- 📬 Email alerts via AWS SNS (threshold-based)  
+- 📊 Uploads to S3 (videos + charts)  
+- 📈 Trend analysis via CSV + PNG charts  
+- 🚀 Deployable with EC2, Gunicorn, Nginx  
+- 🔁 CI/CD ready (GitHub Actions, Terraform, or AWS CodePipeline)
 
 ---
 
-## 📦 Tech Stack
+## 🧠 Use Cases
 
-- **Frontend**: HTML (Flask template)
-- **Backend**: Python + Flask
-- **Detection**: YOLOv8 + OpenCV
-- **Cloud**: AWS SNS, S3
-- **Deployment**: EC2, Gunicorn, Nginx
+- Campus protest alerts  
+- Security threat monitoring  
+- Event crowd control  
+- Loitering/clustering detection  
 
 ---
 
-## ⚙️ How to Run
+## 👨‍💻 Author
+
+**Emmanuel Akorefe**  
+📎 [GitHub](https://github.com/emmanuelakorefe)  
+📜 MIT License — feel free to fork, modify, and deploy.
+
+---
+
+## 📸 Demo Screenshots
+
+1. **Upload Page**  
+   ![Upload](screenshots/protest-detection-1.png)
+
+2. **Detection in Action**  
+   ![Detection](screenshots/protest-detection-2.png)
+
+3. **AWS SNS Email Alert**  
+   ![Email](screenshots/protest-detection-3.png)
+
+4. **Chart and CSV Export**  
+   ![Data](screenshots/protest-detection-4.png)
+
+5. **Annotated Video Playback**  
+   ![Video](screenshots/protest-detection-5.png)
+
+---
+
+## 🚀 Getting Started
 
 ```bash
+# Clone repo
 git clone https://github.com/emmanuelakorefe/ai-protest-detection.git
 cd ai-protest-detection
 
-➡️ Visit http://localhost:5000 in your browser.
+# Install dependencies
+pip install -r requirements.txt
 
-gunicorn app:app --bind 0.0.0.0:5000
-
-📤 Deployment Options
-
-EC2 with Elastic IP + Nginx
-
-Docker (optional)
-
-CI/CD: GitHub Actions, Terraform, or AWS CodePipeline
-
-🎯 Use Cases
-
-Campus protest alerts
-
-Security threat monitoring
-
-Event crowd control
-
-Loitering/clustering detection
-
-👤 Author
-
-Emmanuel Akorefe
-🔗 GitHub
-📄 License
-
-MIT License — Feel free to fork, modify, and deploy.
+# Run app
+python app.py
+```
 
 ---
 
-Once you save this as `README.md`, do the following:
+## 🐳 Docker Setup
 
 ```bash
-git add README.md
-git commit -m "Added updated README with renamed screenshots"
-git push origin main
+# Build Docker image
+docker build -t protest-detect .
 
-pip install -r requirements.txt
-python app.py
+# Run container
+docker run -p 5000:5000 protest-detect
+```
+
+---
+
+## 🏗️ Deployment Options
+
+- Terraform + EC2 + Gunicorn + Nginx  
+- AWS SNS for notifications  
+- S3 for video/chart storage  
+- GitHub Actions for CI/CD  
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run test script (optional)
+python test.py
+```
+
+---
+
+### 📝 Notes:
+- Make sure your screenshot images are placed in the folder:  
+  `screenshots/protest-detection-1.png`, `...-2.png`, etc.
+- If you name your images differently, update the image paths in the markdown.
