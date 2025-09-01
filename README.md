@@ -34,24 +34,23 @@ Uploads videos, detects crowd clustering, sends email alerts, and exports trend 
 
 ---
 
-## 📸 Demo Screenshots
+### 📸 Demo Screenshots
 
-1. **Upload Page**  
+1. Upload Page  
    ![Upload](screenshots/protest-detection-1.png)
 
-2. **Detection in Action**  
+2. Detection in Action  
    ![Detection](screenshots/protest-detection-2.png)
 
-3. **AWS SNS Email Alert**  
+3. AWS SNS Email Alert  
    ![Email](screenshots/protest-detection-3.png)
 
-4. **Chart and CSV Export**  
+4. Chart and CSV Export  
    ![Data](screenshots/protest-detection-4.png)
 
-5. **Annotated Video Playback**  
-   ![Video](screenshots/protest-detection-5.png)
+5. Annotated Video Playback  
+   ![Video](screenshots/protest-detection-5.jpg)  <!-- NOTE: .jpg not .png -->
 
----
 
 ## 🚀 Getting Started
 
