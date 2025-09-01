@@ -49,7 +49,7 @@ Uploads videos, detects crowd clustering, sends email alerts, and exports trend 
    ![Data](screenshots/protest-detection-4.png)
 
 5. Annotated Video Playback  
-   ![Video](screenshots/protest-detection-5.jpg)  <!-- NOTE: .jpg not .png -->
+   ![Video](screenshots/protest-detection-5.png)  
 
 
 ## 🚀 Getting Started
